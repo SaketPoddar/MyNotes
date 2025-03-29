@@ -1,17 +1,35 @@
 import React, { useState } from "react";
-import { moderateScale } from "react-native-size-matters";
 import {
   View,
   Text,
   TextInput,
-  Button,
   ScrollView,
   TouchableOpacity,
   Modal,
   StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
 } from "react-native";
+import { moderateScale } from "react-native-size-matters";
+
+const COLORS = {
+  primary: "#1E90FF",
+  secondary: "#00BFFF",
+  white: "#FFFFFF",
+  black: "#000000",
+  gray: "#ccc",
+  error: "#d9534f",
+};
+
+const SimpleButton = ({ onPress, text, style }) => (
+  <TouchableOpacity onPress={onPress} style={[styles.button, style]}>
+    <Text style={styles.buttonText}>{text}</Text>
+  </TouchableOpacity>
+);
 
 const App = () => {
+  const [showLandingPage, setShowLandingPage] = useState(true);
   const [notes, setNotes] = useState([]);
   const [selectedNote, setSelectedNote] = useState(null);
   const [title, setTitle] = useState("");
@@ -19,179 +37,144 @@ const App = () => {
   const [modalVisible, setModalVisible] = useState(false);
 
   const handleSaveNote = () => {
-    if (selectedNote) {
-      const updatedNotes = notes.map((note) =>
-        note.id === selectedNote.id
-          ? { ...note, title, content }
-          : note
-      );
-      setNotes(updatedNotes);
-      setSelectedNote(null);
-    } else {
-      const newNote = {
-        id: Date.now(),
-        title,
-        content,
-      };
-      setNotes([...notes, newNote]);
+    if (!title.trim()) {
+      Alert.alert("Error", "Note title cannot be empty!");
+      return;
     }
+    const newNote = { id: selectedNote?.id || Date.now(), title, content };
+    setNotes((prevNotes) =>
+      selectedNote
+        ? prevNotes.map((note) => (note.id === selectedNote.id ? newNote : note))
+        : [...prevNotes, newNote]
+    );
+    resetModalState();
+  };
+
+  const resetModalState = () => {
     setTitle("");
     setContent("");
     setModalVisible(false);
-  };
-
-  const handleEditNote = (note) => {
-    setSelectedNote(note);
-    setTitle(note.title);
-    setContent(note.content);
-    setModalVisible(true);
-  };
-
-  const handleDeleteNote = (note) => {
-    const updatedNotes = notes.filter((item) => item.id !== note.id);
-    setNotes(updatedNotes);
     setSelectedNote(null);
-    setModalVisible(false);
+  };
+
+  const handleDeleteNote = () => {
+    setNotes((prevNotes) => prevNotes.filter((note) => note.id !== selectedNote.id));
+    resetModalState();
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>My Notes</Text>
-
-      <ScrollView style={styles.noteList}>
-        {notes.map((note) => (
-          <TouchableOpacity
-            key={note.id}
-            onPress={() => handleEditNote(note)}
-          >
-            <Text style={styles.noteTitle}>{note.title}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => {
-          setTitle("");
-          setContent("");
-          setModalVisible(true);
-        }}
-      >
-        <Text style={styles.addButtonText}>Add Note</Text>
-      </TouchableOpacity>
-
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        transparent={false}
-      >
-        <View style={styles.modalContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter note title"
-            value={title}
-            onChangeText={setTitle}
-          />
-
-          <TextInput
-            style={styles.contentInput}
-            multiline
-            placeholder="Enter note content"
-            value={content}
-            onChangeText={setContent}
-          />
-
-          <View style={styles.buttonContainer}>
-            <Button
-              title="Save"
-              onPress={handleSaveNote}
-              color="#007BFF"
-            />
-            <Button
-              title="Cancel"
-              onPress={() => setModalVisible(false)}
-              color="#FF3B30"
-            />
-            {selectedNote && (
-              <Button
-                title="Delete"
-                onPress={() => handleDeleteNote(selectedNote)}
-                color="#FF9500"
-              />
-            )}
+      {showLandingPage ? (
+        <View style={styles.landingPage}>
+          <View style={styles.header}>  
+            <Text style={styles.title}>Welcome to My Notes</Text>
+          </View>
+          <View style={styles.welcomeContent}>
+            <Text style={styles.landingText}>Organize your thoughts and ideas with ease!</Text>
+            <SimpleButton onPress={() => setShowLandingPage(false)} text="Start Now" style={styles.startButton} />
           </View>
         </View>
+      ) : (
+        <>
+          <View style={styles.header}>  
+            <Text style={styles.headerTitle}>My Notes</Text>
+          </View>
+          <ScrollView style={styles.noteList}>
+            {notes.map((note) => (
+              <TouchableOpacity
+                key={note.id}
+                onPress={() => {
+                  setSelectedNote(note);
+                  setTitle(note.title);
+                  setContent(note.content);
+                  setModalVisible(true);
+                }}
+                style={styles.noteCard}
+              >
+                <Text style={styles.noteTitle}>{note.title}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          <SimpleButton
+            onPress={() => {
+              resetModalState();
+              setModalVisible(true);
+            }}
+            text="Add Note"
+            style={styles.addButton}
+          />
+          <SimpleButton
+            onPress={() => setShowLandingPage(true)}
+            text="< Back"
+            style={styles.backButton}
+          />
+        </>
+      )}
+
+      <Modal visible={modalVisible} animationType="slide" transparent>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <View style={styles.modalContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter note title"
+              value={title}
+              onChangeText={setTitle}
+            />
+            <TextInput
+              style={styles.contentInput}
+              multiline
+              placeholder="Enter note content"
+              value={content}
+              onChangeText={setContent}
+            />
+            <View style={styles.buttonContainer}>
+              <SimpleButton onPress={handleSaveNote} text="Save" />
+              <SimpleButton onPress={resetModalState} text="Cancel" style={styles.cancelButton} />
+              {selectedNote && (
+                <SimpleButton
+                  onPress={handleDeleteNote}
+                  text="Delete"
+                  style={styles.deleteButton}
+                />
+              )}
+            </View>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: moderateScale(40),
-    backgroundColor: "#e6e6e6",
+  container: { flex: 1, backgroundColor: COLORS.white },
+  header: { padding: moderateScale(20), alignItems: "center", backgroundColor: COLORS.primary },
+  title: { fontSize: moderateScale(28), color: COLORS.white, fontWeight: "bold" },
+  landingPage: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.white },
+  welcomeContent: { alignItems: "center" },
+  landingText: { fontSize: moderateScale(16), color: COLORS.black, marginBottom: moderateScale(20) },
+  noteList: { marginTop: moderateScale(10), padding: moderateScale(10) },
+  noteCard: { padding: moderateScale(15), marginBottom: moderateScale(10), backgroundColor: COLORS.gray, borderRadius: 8 },
+  noteTitle: { fontSize: moderateScale(18), fontWeight: "bold", color: COLORS.black },
+  button: {
+    paddingVertical: moderateScale(10),
+    paddingHorizontal: moderateScale(15),
+    backgroundColor: COLORS.primary,
+    borderRadius: 10,
   },
-  title: {
-    fontSize: moderateScale(24),
-    fontWeight: "bold",
-    marginBottom: moderateScale(10),
-    color: "#333",
-    alignSelf: "center",
-    padding: moderateScale(30),
-  },
-  noteList: {
-    flex: 1,
-  },
-  noteTitle: {
-    fontSize: moderateScale(15),
-    marginBottom: moderateScale(10),
-    fontWeight: "bold",
-    color: "black",
-    backgroundColor: "white",
-    height: moderateScale(40),
-    width: "100%",
-    padding: moderateScale(10),
-    borderRadius: moderateScale(8),
-  },
-  addButton: {
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#007BFF",
-    paddingVertical: moderateScale(12),
-    borderRadius: moderateScale(5),
-    marginTop: moderateScale(10),
-  },
-  addButtonText: {
-    color: "white",
-    fontSize: moderateScale(16),
-    fontWeight: "bold",
-  },
-  modalContainer: {
-    flex: 1,
-    padding: moderateScale(50),
-    backgroundColor: "white",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    padding: moderateScale(10),
-    marginBottom: moderateScale(10),
-    borderRadius: moderateScale(5),
-  },
-  contentInput: {
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    padding: moderateScale(10),
-    marginBottom: moderateScale(20),
-    borderRadius: moderateScale(5),
-    height: moderateScale(150),
-    textAlignVertical: "top",
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
+  buttonText: { color: COLORS.white, textAlign: "center", fontSize: moderateScale(16) },
+  addButton: { position: "absolute", bottom: moderateScale(80), right: moderateScale(20) },
+  backButton: { position: "absolute", bottom: moderateScale(140), right: moderateScale(20) },
+  modalOverlay: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.5)" },
+  modalContainer: { width: "90%", padding: 20, backgroundColor: COLORS.white, borderRadius: 10 },
+  input: { borderBottomWidth: 1, marginBottom: moderateScale(10), fontSize: moderateScale(16) },
+  contentInput: { borderWidth: 1, padding: 10, fontSize: moderateScale(16), marginBottom: 15 },
+  buttonContainer: { flexDirection: "row", justifyContent: "space-between" },
+  cancelButton: { marginLeft: 10 },
+  deleteButton: { marginLeft: 10, backgroundColor: COLORS.error },
+  startButton: { marginTop: moderateScale(20) },
 });
 
 export default App;

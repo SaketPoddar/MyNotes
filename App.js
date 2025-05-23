@@ -9,11 +9,11 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Alert,
+  Alert,   
 } from "react-native";
 import { moderateScale } from "react-native-size-matters";
 
-//NotesApp(SignupPage)
+//NotesApp(SignupPage) Nikhil
 
 const COLORS = {
   primary: "#1E90FF",

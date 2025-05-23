@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { moderateScale } from "react-native-size-matters";
 
-//NotesApp(SignupPage) saket
+//NotesApp(SignupPage) feature/NewUser
 
 const COLORS = {
   primary: "#1E90FF",
